@@ -99,10 +99,7 @@ for frame in webcam:
 
     # Process the detection result, then display result
     annotated_image = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
-    try:
-      annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-    except UnboundLocalError:
-      continue
+    annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
     cv2.imshow('w', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
     cv2.imshow('w', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
 
