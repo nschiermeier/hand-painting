@@ -8,7 +8,7 @@ import numpy as np
 from os.path import abspath
 
 # Define a simple webcam object that will get video stream from webcam (src=0),
-#  with a frame width of 640 (auto setting heigth to keep original aspect ratio)
+# with a frame width of 640 (auto setting height to keep original aspect ratio)
 webcam = Webcam(src=0, w=640)
 print(f"Frame size: {webcam.w} x {webcam.h}")
 mp_hands = mp.solutions.hands.Hands()
@@ -90,7 +90,11 @@ for frame in webcam:
     else:
       print("No hand was detected")
     """
-
+    #print(results.multi_hand_landmarks)
+    for hand_landmark in results.multi_hand_landmarks:
+      finger_tip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].x
+      finger_tip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].y
+      print(f"Finger tip coord: {(finger_tip_x, finger_tip_y)}")
     # Load input image/frame for detector
     # Detect pose landmarks from current frame
     rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
@@ -98,9 +102,7 @@ for frame in webcam:
     hand_result = hand_detector.detect(rgb_frame)
 
     # Process the detection result, then display result
-    annotated_image = draw_landmarks_on_image(rgb_frame.numpy_view(), detection_result)
     annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-    cv2.imshow('w', cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR))
     cv2.imshow('w', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
 
     # Break the loop if the user presses the 'q' key
