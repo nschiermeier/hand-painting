@@ -37,7 +37,10 @@ def draw_hand_landmarks_on_image(rgb_image, detection_result):
     pass
   return annotated_image
 
-
+def detect_fingers():
+  
+  return
+ 
 hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
 
@@ -69,9 +72,19 @@ while capture.isOpened():
       #      Wondering if this would be better suited for the detector rather than landmarker?
       index_tip_x  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].x
       index_tip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].y
+      index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].x
+      index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].y
 
       middle_tip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].x
       middle_tip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].y
+      middle_pip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].x
+      middle_pip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].y
+
+      # Finger is "up" if tip.y < pip.y (Hand in fist has tip below pip)
+      index_up  = index_tip_y < index_pip_y
+      middle_up = middle_tip_y < middle_pip_y
+      print(f"INDEX  IS {'up' if index_up else 'down'}")
+      print(f"MIDDLE IS {'up' if middle_up else 'down'}")
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
@@ -84,3 +97,5 @@ while capture.isOpened():
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
     break
+
+capture.release()
