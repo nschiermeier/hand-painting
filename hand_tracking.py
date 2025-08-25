@@ -52,7 +52,7 @@ def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
     # Finger is "up" if tip.y < pip.y (Hand in fist has tip below pip)
     index_up  = index_tip_y < index_pip_y
     middle_up = middle_tip_y < middle_pip_y
-  return (index_up, middle_up)
+  return ((index_up, middle_up), (index_tip_x, index_tip_y, middle_tip_x, middle_tip_y))
  
 hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
@@ -79,10 +79,15 @@ while capture.isOpened():
   # Determine if a hand is on screen or not
   results = mp_hands.process(frame)
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
-    index, middle = detect_raised_fingers(results.multi_hand_landmarks)
-   
-    print(f"INDEX  IS {'up' if index else 'down'}")
-    print(f"MIDDLE IS {'up' if middle else 'down'}")
+    fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
+    index, middle = fingers
+    index_x = locations[0]
+    index_y = locations[1]
+    middle_x = locations[0]
+    middle_y = locations[1]
+
+    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
