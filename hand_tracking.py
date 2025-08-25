@@ -39,20 +39,16 @@ def draw_hand_landmarks_on_image(rgb_image, detection_result):
 
 def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
   for hand_landmark in handmarks:
-    index_tip_x  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].x
-    index_tip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].y
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].x
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].y
+    index_tip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP]
+    index_pip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP]
 
-    middle_tip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].x
-    middle_tip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].y
-    middle_pip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].x
-    middle_pip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].y
+    middle_tip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP]
+    middle_pip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP]
 
     # Finger is "up" if tip.y < pip.y (Hand in fist has tip below pip)
-    index_up  = index_tip_y < index_pip_y
-    middle_up = middle_tip_y < middle_pip_y
-  return ((index_up, middle_up), (index_tip_x, index_tip_y, middle_tip_x, middle_tip_y))
+    index_up  = index_tip.y < index_pip.y
+    middle_up = middle_tip.y < middle_pip.y
+  return ((index_up, middle_up), (index_tip, middle_tip))
  
 hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
@@ -81,13 +77,20 @@ while capture.isOpened():
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
     fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
     index, middle = fingers
-    index_x = locations[0]
-    index_y = locations[1]
-    middle_x = locations[0]
-    middle_y = locations[1]
+    index_x = locations[0].x
+    index_y = locations[0].y
+    middle_x = locations[1].x
+    middle_y = locations[1].y
 
-    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
-    print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
+    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
+
+    if index and middle:
+      print("Selection mode")
+    elif index:
+      print("Drawing mode")
+    else:
+      print("Off")
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
