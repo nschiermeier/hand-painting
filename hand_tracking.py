@@ -4,6 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+from painting_tools import create_overlay
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -98,7 +99,9 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
+  #cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
+  new_overlay = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  cv2.imshow('Webcam Source', new_overlay)
 
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
