@@ -40,6 +40,7 @@ def draw_hand_landmarks_on_image(rgb_image, detection_result):
 
 def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
   for hand_landmark in handmarks:
+    # Get coordinates of index and middle fingers
     index_tip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP]
     index_pip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP]
 
@@ -63,6 +64,7 @@ capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+curr_color = None
 while capture.isOpened():
  
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
@@ -72,30 +74,11 @@ while capture.isOpened():
 
   # Show the frames in a cv2 window
   frame_as_img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+  frame_h, frame_w, _ = frame.shape
     
   # Determine if a hand is on screen or not
   results = mp_hands.process(frame)
-  if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
-    fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
-    index, middle = fingers
-    index_x = locations[0].x
-    index_y = locations[0].y
-    middle_x = locations[1].x
-    middle_y = locations[1].y
-
-    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
-    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
-
-    if index and middle:
-      #print("Selection mode")
-      if index_y < 0.1:
-        if index_x < 0.1 and index_x > 0.05:
-
-          print("white square selected!")
-    elif index:
-      print("Drawing mode")
-    else:
-      print("Off")
+ 
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
@@ -103,7 +86,36 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  new_overlay = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  new_overlay, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+
+  if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
+    fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
+    index, middle = fingers
+    # 'locations' coords are from 0-1 rather than pixel values
+    # To get pixel values, multiply by webcam resoltuion
+    # Top left of screen (0,0), bottom right is (1280, 720)
+    index_x = locations[0].x  * frame_w
+    index_y = locations[0].y  * frame_h
+    middle_x = locations[1].x * frame_w
+    middle_y = locations[1].y * frame_h
+
+    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
+
+    if index and middle: # Selection mode
+      for color, (y_min, y_max, x_min, x_max) in color_locs:
+      # This works, but I don't like the loop as it feels inefficient...
+        if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
+          if x_min <= index_x <= x_max: # Next see specific coords of fingers.
+                                        # If coords overlap with a colored square,
+                                        # set to that color
+            curr_color = color
+
+    elif index: # Drawing mode
+      pass
+    else: # Nothing
+      pass
+
   cv2.imshow('Webcam Source', new_overlay)
 
   # Break the loop if the user presses the 'q' key
@@ -111,3 +123,4 @@ while capture.isOpened():
     break
 
 capture.release()
+cv2.destroyAllWindows()
