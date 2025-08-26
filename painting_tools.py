@@ -26,12 +26,13 @@ def create_overlay(video_source):
   color_loc_pair = []
   for i, color in enumerate(color_list):
     # place colors on the overlay by incrementing the starting and ending positions
-    #start_x = color_w * i
     start_x = int(space*i)
     end_x = start_x + color_w
     i += 1
     esi = int(edge_size*i)
     overlay[edge_size:edge_size+color_h, esi+start_x:esi+end_x] = color
+    # Change color to be same channels at video_source for selection
+    color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
   video_source = cv2.addWeighted(overlay, alpha, video_source, 1-alpha, 0) 
   return (video_source, color_loc_pair)

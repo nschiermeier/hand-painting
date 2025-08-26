@@ -105,12 +105,14 @@ while capture.isOpened():
       for color, (y_min, y_max, x_min, x_max) in color_locs:
       # This works, but I don't like the loop as it feels inefficient...
         if y_min <= index_y <= y_max:
-          print("y True")
         
           # Go through colors to find x and y positions
           # Detect if index_x is in any of the ranges in color_locs[i][1][j]?
           if x_min <= index_x <= x_max:
             print("x True")
+            print(color)
+          else:
+            print("y True")
 
     elif index: # Drawing mode
       pass
