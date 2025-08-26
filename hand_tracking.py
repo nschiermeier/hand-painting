@@ -103,7 +103,6 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  #cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
   new_overlay = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
   cv2.imshow('Webcam Source', new_overlay)
 
