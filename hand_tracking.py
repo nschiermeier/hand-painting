@@ -64,6 +64,7 @@ capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+curr_color = None
 while capture.isOpened():
  
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
@@ -104,15 +105,11 @@ while capture.isOpened():
     if index and middle: # Selection mode
       for color, (y_min, y_max, x_min, x_max) in color_locs:
       # This works, but I don't like the loop as it feels inefficient...
-        if y_min <= index_y <= y_max:
-        
-          # Go through colors to find x and y positions
-          # Detect if index_x is in any of the ranges in color_locs[i][1][j]?
-          if x_min <= index_x <= x_max:
-            print("x True")
-            print(color)
-          else:
-            print("y True")
+        if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
+          if x_min <= index_x <= x_max: # Next see specific coords of fingers.
+                                        # If coords overlap with a colored square,
+                                        # set to that color
+            curr_color = color
 
     elif index: # Drawing mode
       pass
