@@ -77,6 +77,16 @@ while capture.isOpened():
     
   # Determine if a hand is on screen or not
   results = mp_hands.process(frame)
+ 
+  # Load input image/frame for detector
+  # Detect pose landmarks from current frame
+  rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
+  hand_result = hand_detector.detect(rgb_frame)
+
+  # Process the detection result, then display result
+  annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
+  new_overlay, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
     fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
     index, middle = fingers
@@ -88,26 +98,25 @@ while capture.isOpened():
     middle_x = locations[1].x * frame_w
     middle_y = locations[1].y * frame_h
 
-    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
     #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
 
     if index and middle: # Selection mode
-      if index_y < 0.1:
-        if index_x < 0.1 and index_x > 0.05:
+      for color, (y_min, y_max, x_min, x_max) in color_locs:
+      # This works, but I don't like the loop as it feels inefficient...
+        if y_min <= index_y <= y_max:
+          print("y True")
+        
+          # Go through colors to find x and y positions
+          # Detect if index_x is in any of the ranges in color_locs[i][1][j]?
+          if x_min <= index_x <= x_max:
+            print("x True")
 
-          print("white square selected!")
     elif index: # Drawing mode
       pass
     else: # Nothing
       pass
-  # Load input image/frame for detector
-  # Detect pose landmarks from current frame
-  rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
-  hand_result = hand_detector.detect(rgb_frame)
 
-  # Process the detection result, then display result
-  annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  new_overlay = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
   cv2.imshow('Webcam Source', new_overlay)
 
   # Break the loop if the user presses the 'q' key
