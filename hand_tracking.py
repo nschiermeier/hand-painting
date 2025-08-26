@@ -4,6 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+from painting_tools import create_overlay
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -39,22 +40,18 @@ def draw_hand_landmarks_on_image(rgb_image, detection_result):
 
 def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
   for hand_landmark in handmarks:
-    index_tip_x  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].x
-    index_tip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].y
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].x
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].y
+    index_tip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP]
+    index_pip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP]
 
-    middle_tip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].x
-    middle_tip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].y
-    middle_pip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].x
-    middle_pip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].y
+    middle_tip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP]
+    middle_pip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP]
 
     # Finger is "up" if tip.y < pip.y (Hand in fist has tip below pip)
-    index_up  = index_tip_y < index_pip_y
-    middle_up = middle_tip_y < middle_pip_y
-  return (index_up, middle_up)
+    index_up  = index_tip.y < index_pip.y
+    middle_up = middle_tip.y < middle_pip.y
+  return ((index_up, middle_up), (index_tip, middle_tip))
  
-hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
+hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/data/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
 
 hand_options = vision.HandLandmarkerOptions( # options object using specified base settings
@@ -79,10 +76,26 @@ while capture.isOpened():
   # Determine if a hand is on screen or not
   results = mp_hands.process(frame)
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
-    index, middle = detect_raised_fingers(results.multi_hand_landmarks)
-   
-    print(f"INDEX  IS {'up' if index else 'down'}")
-    print(f"MIDDLE IS {'up' if middle else 'down'}")
+    fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
+    index, middle = fingers
+    index_x = locations[0].x
+    index_y = locations[0].y
+    middle_x = locations[1].x
+    middle_y = locations[1].y
+
+    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
+
+    if index and middle:
+      #print("Selection mode")
+      if index_y < 0.1:
+        if index_x < 0.1 and index_x > 0.05:
+
+          print("white square selected!")
+    elif index:
+      print("Drawing mode")
+    else:
+      print("Off")
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
@@ -90,7 +103,9 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
+  #cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
+  new_overlay = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  cv2.imshow('Webcam Source', new_overlay)
 
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
