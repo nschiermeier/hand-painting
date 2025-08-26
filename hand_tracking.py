@@ -4,7 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-from painting_tools import create_overlay
+from painting_tools import create_overlay, paint
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -112,12 +112,15 @@ while capture.isOpened():
             curr_color = color
 
     elif index: # Drawing mode
-      pass
-    else: # Nothing
+      # Create something that doesn't allow user to draw on top banner
+      # I think I just create another overlay here
+      # The thing I don't know is how to make the painting look good...
+      new_overlay = paint(new_overlay, curr_color, index_x, index_y)
+      
+    else: # Nothing, this might not be needed
       pass
 
   cv2.imshow('Webcam Source', new_overlay)
-
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
     break
