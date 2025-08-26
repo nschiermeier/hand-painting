@@ -51,7 +51,7 @@ def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
     middle_up = middle_tip.y < middle_pip.y
   return ((index_up, middle_up), (index_tip, middle_tip))
  
-hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
+hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/data/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
 
 hand_options = vision.HandLandmarkerOptions( # options object using specified base settings
@@ -83,11 +83,15 @@ while capture.isOpened():
     middle_x = locations[1].x
     middle_y = locations[1].y
 
-    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
     #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
 
     if index and middle:
-      print("Selection mode")
+      #print("Selection mode")
+      if index_y < 0.1:
+        if index_x < 0.1 and index_x > 0.05:
+
+          print("white square selected!")
     elif index:
       print("Drawing mode")
     else:
