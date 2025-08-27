@@ -65,6 +65,7 @@ capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
 curr_color = None
+canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
 while capture.isOpened():
  
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
@@ -86,7 +87,7 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  new_overlay, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  banner_overlay, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
 
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
     fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
@@ -109,17 +110,23 @@ while capture.isOpened():
           if x_min <= index_x <= x_max: # Next see specific coords of fingers.
                                         # If coords overlap with a colored square,
                                         # set to that color
-            curr_color = color
+            curr_color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
 
     elif index: # Drawing mode
       # Create something that doesn't allow user to draw on top banner
       # I think I just create another overlay here
       # The thing I don't know is how to make the painting look good...
-      new_overlay = paint(new_overlay, curr_color, index_x, index_y)
+      if curr_color is not None:
+        paint(canvas, curr_color, index_x, index_y)
       
     else: # Nothing, this might not be needed
       pass
 
+  # Add weighted overlays on top of eachother to persistently draw on the canvas
+  new_overlay = cv2.addWeighted(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR), 1.0, canvas, 1.0, 0)
+  new_overlay = cv2.addWeighted(new_overlay, 0.4, banner_overlay, 0.6, 0)
+  #new_overlay = cv2.addWeighted(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR), 1.0, banner_overlay, 0.6, 0)
+  #new_overlay = cv2.addWeighted(new_overlay, 0.4, canvas, 1.0, 0)
   cv2.imshow('Webcam Source', new_overlay)
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
