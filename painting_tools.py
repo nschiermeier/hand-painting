@@ -38,13 +38,12 @@ def create_overlay(video_source):
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
   return (overlay, banner_h, color_loc_pair)
 
-def paint(video_source, color, index_x, index_y):
+def paint(video_source, color, index_x, index_y, radius=8):
   # Just create an overlay and add splotches of the color to that overlay
   color_tuple = tuple(int(c) for c in cv2.mean(color)[:3])
-  # To persistantly add to drawing, use rectangle method to draw
-  # Maybe try switching this to circle at some point to see if that draws more smoothly?
-  cv2.rectangle(video_source,
-    (int(index_x-5), int(index_y-5)),
-    (int(index_x+5), int(index_y+5)),
-    color_tuple, -1)
+  # To persistantly add to drawing, use circle method to draw
+  cv2.circle(video_source,
+    center=(int(index_x), int(index_y)),
+    radius=radius, # could eventually be a parameter?
+    color =color_tuple, thickness=-1)
   return video_source
