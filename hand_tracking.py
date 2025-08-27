@@ -66,8 +66,9 @@ capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
 curr_color = None
 canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
+count = 0
 while capture.isOpened():
- 
+  count+=1
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
   ret, frame = capture.read()
   if not ret:
@@ -78,7 +79,7 @@ while capture.isOpened():
   frame_h, frame_w, _ = frame.shape
     
   # Determine if a hand is on screen or not
-  results = mp_hands.process(frame)
+  results = mp_hands.process(frame_as_img)
  
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
@@ -116,17 +117,19 @@ while capture.isOpened():
       # Create something that doesn't allow user to draw on top banner
       # I think I just create another overlay here
       # The thing I don't know is how to make the painting look good...
+      print(curr_color)
       if curr_color is not None:
         paint(canvas, curr_color, index_x, index_y)
       
     else: # Nothing, this might not be needed
+      print("f")
       pass
 
+  else:
+    print(count)
   # Add weighted overlays on top of eachother to persistently draw on the canvas
   new_overlay = cv2.addWeighted(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR), 1.0, canvas, 1.0, 0)
   new_overlay = cv2.addWeighted(new_overlay, 0.4, banner_overlay, 0.6, 0)
-  #new_overlay = cv2.addWeighted(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR), 1.0, banner_overlay, 0.6, 0)
-  #new_overlay = cv2.addWeighted(new_overlay, 0.4, canvas, 1.0, 0)
   cv2.imshow('Webcam Source', new_overlay)
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
