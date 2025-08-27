@@ -4,6 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
+from painting_tools import create_overlay, paint
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -39,22 +40,19 @@ def draw_hand_landmarks_on_image(rgb_image, detection_result):
 
 def detect_raised_fingers(handmarks): # handmarks = 'hand landmarks' portmanteau
   for hand_landmark in handmarks:
-    index_tip_x  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].x
-    index_tip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP].y
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].x
-    index_pip_y  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP].y
+    # Get coordinates of index and middle fingers
+    index_tip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_TIP]
+    index_pip  = hand_landmark.landmark[mp.solutions.hands.HandLandmark.INDEX_FINGER_PIP]
 
-    middle_tip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].x
-    middle_tip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP].y
-    middle_pip_x = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].x
-    middle_pip_y = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP].y
+    middle_tip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_TIP]
+    middle_pip = hand_landmark.landmark[mp.solutions.hands.HandLandmark.MIDDLE_FINGER_PIP]
 
     # Finger is "up" if tip.y < pip.y (Hand in fist has tip below pip)
-    index_up  = index_tip_y < index_pip_y
-    middle_up = middle_tip_y < middle_pip_y
-  return (index_up, middle_up)
+    index_up  = index_tip.y < index_pip.y
+    middle_up = middle_tip.y < middle_pip.y
+  return ((index_up, middle_up), (index_tip, middle_tip))
  
-hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/hand_landmarker.task'
+hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/data/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
 
 hand_options = vision.HandLandmarkerOptions( # options object using specified base settings
@@ -66,8 +64,9 @@ capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
+curr_color = None
+canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
 while capture.isOpened():
- 
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
   ret, frame = capture.read()
   if not ret:
@@ -75,14 +74,11 @@ while capture.isOpened():
 
   # Show the frames in a cv2 window
   frame_as_img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+  frame_h, frame_w, _ = frame.shape
     
   # Determine if a hand is on screen or not
-  results = mp_hands.process(frame)
-  if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
-    index, middle = detect_raised_fingers(results.multi_hand_landmarks)
-   
-    print(f"INDEX  IS {'up' if index else 'down'}")
-    print(f"MIDDLE IS {'up' if middle else 'down'}")
+  results = mp_hands.process(frame_as_img)
+ 
   # Load input image/frame for detector
   # Detect pose landmarks from current frame
   rgb_frame = mp.Image(image_format=mp.ImageFormat.SRGB, data=frame_as_img)
@@ -90,10 +86,66 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  cv2.imshow('Webcam Source', cv2.cvtColor(annotated_hand,  cv2.COLOR_RGB2BGR))
+  banner_overlay, banner_h, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  alpha = 0.6
+
+  if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
+    fingers, locations = detect_raised_fingers(results.multi_hand_landmarks)
+    index, middle = fingers
+    # 'locations' coords are from 0-1 rather than pixel values
+    # To get pixel values, multiply by webcam resoltuion
+    # Top left of screen (0,0), bottom right is (1280, 720)
+    index_x = locations[0].x  * frame_w
+    index_y = locations[0].y  * frame_h
+    middle_x = locations[1].x * frame_w
+    middle_y = locations[1].y * frame_h
+
+    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
+    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
+
+    if index and middle: # Selection mode
+      for color, (y_min, y_max, x_min, x_max) in color_locs:
+      # This works, but I don't like the loop as it feels inefficient...
+        if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
+          if x_min <= index_x <= x_max: # Next see specific coords of fingers.
+                                        # If coords overlap with a colored square,
+                                        # set to that color
+            curr_color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
+
+    elif index: # Drawing mode
+      #TODO: Create something that doesn't allow user to draw on top banner
+      if curr_color is not None:
+        paint(canvas, curr_color, index_x, index_y)
+      
+    else: # Nothing, this might not be needed
+      pass
+
+  # Banner blending:
+  # Create a base layer for the background and the mask
+  # for the canvas that's drawn on in paint()
+
+  base = cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR)
+  mask = cv2.cvtColor(canvas, cv2.COLOR_BGR2GRAY)
+  _, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
+
+  # add the canvas drawings to the background while NOT including the masks
+  # this fixes issue #12, because now there aren't multiple alpha layers
+  # being multiplied onto eachother so it just pastes the drawings.
+  bg = cv2.bitwise_and(base, base, mask=cv2.bitwise_not(mask))
+  fg = cv2.bitwise_and(canvas, canvas, mask=mask)
+  frame_with_canvas = cv2.add(bg, fg)
+
+  # Add the banner and create an ROI to blend, so that this is
+  # the ONLY region that the alpha gets appleid to, not the whole image
+  roi = frame_with_canvas[0:banner_h, 0:frame.shape[1]]
+  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, banner_overlay, alpha, 0)
+  frame_with_canvas[0:banner_h, 0:frame.shape[1]] = blended_roi
+
+  cv2.imshow('Webcam Source', frame_with_canvas)
 
   # Break the loop if the user presses the 'q' key
   if cv2.waitKey(1) & 0xFF == ord('q'):
     break
 
 capture.release()
+cv2.destroyAllWindows()
