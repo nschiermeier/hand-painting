@@ -21,10 +21,12 @@ def create_overlay(video_source):
   # Load banner along with overlay that only captures the banner's region,
   # rather than the full image
   banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
-  overlay = np.zeros((banner_h, frame_w, 3), dtype=np.uint8)
+  overlay = np.zeros((banner_h, frame_w, frame_c), dtype=np.uint8)
   overlay[:] = banner
   
-  space = (frame_w - edge_size*2) / len(color_list) # create the amount of space needed per color
+  space = (frame_w - edge_size*2) / len(color_list) # dynamically create the 
+                                                    # amount of space needed
+                                                    # per color in case more added
   color_loc_pair = []
   for i, color in enumerate(color_list):
     # place colors on the overlay by incrementing the starting and ending positions
@@ -46,4 +48,21 @@ def paint(video_source, color, index_x, index_y, radius=8):
     center=(int(index_x), int(index_y)),
     radius=radius, # could eventually be a parameter?
     color =color_tuple, thickness=-1)
+  return video_source
+
+def blend(video_source, new_color, curr_color, index_x, index_y):
+  # If a color is already painted, blend them together!
+  # Maybe average the two RGB vals?
+  color_tuple = tuple(int(c) for c in cv2.mean(new_color)[:3])
+  curr_color = tuple(curr_color)
+  if color_tuple == curr_color:
+    # No point in blending two of the same colors together
+    return video_source
+  
+  avg_color = tuple(int(x+y) / 2 for x, y in zip(color_tuple, curr_color))
+
+  cv2.circle(video_source,
+    center=(int(index_x), int(index_y)),
+    radius=8, # could eventually be a parameter?
+    color =avg_color, thickness=-1)
   return video_source
