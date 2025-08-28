@@ -4,7 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-from painting_tools import create_overlay, paint
+from painting_tools import create_overlay, paint, blend
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -73,6 +73,7 @@ while capture.isOpened():
     break
 
   # Show the frames in a cv2 window
+  frame = cv2.flip(frame, 1) # Set to "selfie mode" so it's easier to follow when drawing
   frame_as_img = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
   frame_h, frame_w, _ = frame.shape
     
@@ -115,7 +116,10 @@ while capture.isOpened():
     elif index: # Drawing mode
       #TODO: Create something that doesn't allow user to draw on top banner
       if curr_color is not None:
-        paint(canvas, curr_color, index_x, index_y)
+        if any(canvas[int(index_y)][int(index_x)]) != 0: 
+          blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y)
+        else:
+          paint(canvas, curr_color, index_x, index_y)
       
     else: # Nothing, this might not be needed
       pass
