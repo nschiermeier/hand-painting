@@ -8,13 +8,10 @@ def load_and_process(path, size=(128, 128)):
 
 def create_overlay(video_source):
   
-  red = load_and_process("data/red.png")
-  blue = load_and_process("data/blue.png")
-  yellow = load_and_process("data/yellow.png")
-  green = load_and_process("data/green.png")
+  color_names = ["red", "blue", "yellow", "green", "white", "black"]
+  color_list = [load_and_process(f"data/{color}.png") for color in color_names] 
 
   frame_h, frame_w, frame_c = video_source.shape
-  color_list = [red, blue, yellow, green]
   color_w, color_h, color_c = color_list[0].shape # should all be the same, so I can just take first element
   edge_size = 10
   banner_h = int(color_h+edge_size*2)
