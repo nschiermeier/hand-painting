@@ -11,9 +11,10 @@ def create_overlay(video_source):
   red = load_and_process("data/red.png")
   blue = load_and_process("data/blue.png")
   yellow = load_and_process("data/yellow.png")
+  green = load_and_process("data/green.png")
 
   frame_h, frame_w, frame_c = video_source.shape
-  color_list = [red, blue, yellow]
+  color_list = [red, blue, yellow, green]
   color_w, color_h, color_c = color_list[0].shape # should all be the same, so I can just take first element
   edge_size = 10
   banner_h = int(color_h+edge_size*2)
@@ -40,9 +41,12 @@ def create_overlay(video_source):
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
   return (overlay, banner_h, color_loc_pair)
 
-def paint(video_source, color, index_x, index_y, radius=8):
+def paint(video_source, color, index_x, index_y, radius=15):
   # Just create an overlay and add splotches of the color to that overlay
-  color_tuple = tuple(int(c) for c in cv2.mean(color)[:3])
+  if type(color) is not tuple:
+    color_tuple = tuple(int(c) for c in cv2.mean(color)[:3])
+  else:
+    color_tuple = color
   # To persistantly add to drawing, use circle method to draw
   cv2.circle(video_source,
     center=(int(index_x), int(index_y)),
@@ -55,14 +59,10 @@ def blend(video_source, new_color, curr_color, index_x, index_y):
   # Maybe average the two RGB vals?
   color_tuple = tuple(int(c) for c in cv2.mean(new_color)[:3])
   curr_color = tuple(curr_color)
-  if color_tuple == curr_color:
-    # No point in blending two of the same colors together
-    return video_source
-  
-  avg_color = tuple(int(x+y) / 2 for x, y in zip(color_tuple, curr_color))
 
-  cv2.circle(video_source,
-    center=(int(index_x), int(index_y)),
-    radius=8, # could eventually be a parameter?
-    color =avg_color, thickness=-1)
-  return video_source
+  blended_color = tuple(
+                      int(curr_color[i] * 0.97 + color_tuple[i] * 0.03)
+                      for i in range(3)
+  )
+
+  return paint(video_source, blended_color, index_x, index_y)
