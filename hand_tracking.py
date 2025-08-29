@@ -64,7 +64,7 @@ capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-curr_color = None
+curr_color = (10,10,10)
 radius = 20
 eraser = False
 canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
@@ -106,9 +106,6 @@ while capture.isOpened():
     middle_x = locations[1].x * frame_w
     middle_y = locations[1].y * frame_h
 
-    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
-    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
-
     if index and middle: # Selection mode
       for color, (y_min, y_max, x_min, x_max) in color_locs:
         if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
@@ -144,7 +141,6 @@ while capture.isOpened():
   # Banner blending:
   # Create a base layer for the background and the mask
   # for the canvas that's drawn on in paint()
-
   base = cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR)
   mask = cv2.cvtColor(canvas, cv2.COLOR_BGR2GRAY)
   _, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
@@ -162,10 +158,15 @@ while capture.isOpened():
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, top_banner_overlay, alpha, 0)
   frame_with_canvas[0:banner_h, 0:frame_w] = blended_roi
 
+  # Repeat for bottom banner
   bottom_banner_overlay = bottom_banner_overlay[frame_h-bottom_banner_h:frame_h, 0:frame_w]
   roi = frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w]
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, bottom_banner_overlay, alpha, 0)
   frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w] = blended_roi
+
+  cv2.circle(frame_with_canvas, (755, 660), radius, tuple(int(c) for c in cv2.mean(curr_color)[:3]), 1 if eraser else -1)
+  cv2.putText(frame_with_canvas, "Current Selection:", (425, 630), cv2.FONT_HERSHEY_SIMPLEX, 1, (1, 1, 1), 2)
+  cv2.putText(frame_with_canvas, "Press 'q' to Quit!", (10, 670),  cv2.FONT_HERSHEY_SIMPLEX, 1, (1, 1, 1), 2)
 
   cv2.imshow('Webcam Source', frame_with_canvas)
 

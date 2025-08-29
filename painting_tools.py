@@ -48,13 +48,13 @@ def create_bottom_overlay(video_source):
   bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
   tool_loc_pair = []
 
-  bottom_overlay[607:715, 300:408] = load_and_process("data/eraser.png", (108, 108))
-  tool_loc_pair.append((0, (607, 715, 300, 408)))
+  bottom_overlay[607:715, 290:398] = load_and_process("data/eraser.png", (108, 108))
+  tool_loc_pair.append((0, (607, 715, 290, 398)))
 
   radii = [10, 20, 30, 50]
   edge_gap = 30
   y = frame_h - banner_h + int(banner_h/2)
-  x = 840 + radii[0]
+  x = 845 + radii[0]
   for i, r in enumerate(radii):
     cv2.circle(bottom_overlay, (x, y), r, (0, 0, 1), -1)
     
