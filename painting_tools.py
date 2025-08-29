@@ -46,25 +46,31 @@ def create_bottom_overlay(video_source):
   banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
   bottom_overlay = np.zeros((frame_h, frame_w, frame_c), dtype=np.uint8)
   bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
+  tool_loc_pair = []
 
   bottom_overlay[607:715, 300:408] = load_and_process("data/eraser.png", (108, 108))
+  tool_loc_pair.append((0, (607, 715, 300, 408)))
 
   radii = [10, 20, 30, 50]
   edge_gap = 30
   y = frame_h - banner_h + int(banner_h/2)
-
   x = 840 + radii[0]
   for i, r in enumerate(radii):
     cv2.circle(bottom_overlay, (x, y), r, (0, 0, 1), -1)
+    
+    # Get bounding box of circles probably makes selection easier
+    left_edge    = x-r
+    right_edge   = x+r
+    top_edge     = y-r
+    bottom_edge  = y+r
+    tool_loc_pair.append((radii[i], (top_edge, bottom_edge, left_edge, right_edge)))
     if i < len(radii) - 1:
       # Move to the next center with formula curr center + curr radius + hgap + next radius
       x += r + edge_gap + radii[i+1]
-    
-  tool_loc_pair = None
 
   return (bottom_overlay, banner_h, tool_loc_pair)
 
-def paint(video_source, color, index_x, index_y, radius=15):
+def paint(video_source, color, index_x, index_y, radius=20):
   # Just create an overlay and add splotches of the color to that overlay
   if type(color) is not tuple:
     color_tuple = tuple(int(c) for c in cv2.mean(color)[:3])
@@ -77,7 +83,7 @@ def paint(video_source, color, index_x, index_y, radius=15):
     color =color_tuple, thickness=-1)
   return video_source
 
-def blend(video_source, new_color, curr_color, index_x, index_y):
+def blend(video_source, new_color, curr_color, index_x, index_y, radius):
   # If a color is already painted, blend them together!
   # Maybe average the two RGB vals?
   color_tuple = tuple(int(c) for c in cv2.mean(new_color)[:3])
@@ -88,4 +94,7 @@ def blend(video_source, new_color, curr_color, index_x, index_y):
                       for i in range(3)
   )
 
-  return paint(video_source, blended_color, index_x, index_y)
+  return paint(video_source, blended_color, index_x, index_y, radius)
+
+def erase(video_source, index_x, index_y):
+  return
