@@ -4,7 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-from painting_tools import create_overlay, paint, blend
+from painting_tools import create_top_overlay, create_bottom_overlay, paint, blend
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -64,7 +64,9 @@ capture = cv2.VideoCapture(0)
 capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
-curr_color = None
+curr_color = (10,10,10)
+radius = 20
+eraser = False
 canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
 while capture.isOpened():
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
@@ -87,7 +89,10 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  banner_overlay, banner_h, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  top_overlay_data = create_top_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  top_banner_overlay, banner_h, color_locs = top_overlay_data
+  bottom_overlay_data = create_bottom_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  bottom_banner_overlay, bottom_banner_h, tool_locs = bottom_overlay_data
   alpha = 0.6
 
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
@@ -101,25 +106,34 @@ while capture.isOpened():
     middle_x = locations[1].x * frame_w
     middle_y = locations[1].y * frame_h
 
-    #print(f"INDEX  IS {'up' if index else 'down'} at coordinates {index_x, index_y}")
-    #print(f"MIDDLE IS {'up' if middle else 'down'} at coordinates {middle_x, middle_y}")
-
     if index and middle: # Selection mode
       for color, (y_min, y_max, x_min, x_max) in color_locs:
-      # This works, but I don't like the loop as it feels inefficient...
         if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
           if x_min <= index_x <= x_max: # Next see specific coords of fingers.
                                         # If coords overlap with a colored square,
                                         # set to that color
             curr_color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
+            eraser = False
 
+      for tool, (y_min, y_max, x_min, x_max) in tool_locs:
+        if y_min <= index_y <= y_max:
+          if x_min <= index_x <= x_max:
+            if tool == 0:
+              # Set color to true 0, which should erase
+              curr_color = (0,0,0)
+              eraser = True
+
+
+            else:
+              radius = tool
+        
     elif index: # Drawing mode
       #TODO: Create something that doesn't allow user to draw on top banner
       if curr_color is not None:
-        if any(canvas[int(index_y)][int(index_x)]) != 0: 
-          blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y)
+        if any(canvas[int(index_y)][int(index_x)]) != 0 and eraser==False: 
+          blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y, radius)
         else:
-          paint(canvas, curr_color, index_x, index_y)
+          paint(canvas, curr_color, index_x, index_y, radius)
       
     else: # Nothing, this might not be needed
       pass
@@ -127,7 +141,6 @@ while capture.isOpened():
   # Banner blending:
   # Create a base layer for the background and the mask
   # for the canvas that's drawn on in paint()
-
   base = cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR)
   mask = cv2.cvtColor(canvas, cv2.COLOR_BGR2GRAY)
   _, mask = cv2.threshold(mask, 0, 255, cv2.THRESH_BINARY)
@@ -141,9 +154,19 @@ while capture.isOpened():
 
   # Add the banner and create an ROI to blend, so that this is
   # the ONLY region that the alpha gets appleid to, not the whole image
-  roi = frame_with_canvas[0:banner_h, 0:frame.shape[1]]
-  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, banner_overlay, alpha, 0)
-  frame_with_canvas[0:banner_h, 0:frame.shape[1]] = blended_roi
+  roi = frame_with_canvas[0:banner_h, 0:frame_w]
+  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, top_banner_overlay, alpha, 0)
+  frame_with_canvas[0:banner_h, 0:frame_w] = blended_roi
+
+  # Repeat for bottom banner
+  bottom_banner_overlay = bottom_banner_overlay[frame_h-bottom_banner_h:frame_h, 0:frame_w]
+  roi = frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w]
+  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, bottom_banner_overlay, alpha, 0)
+  frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w] = blended_roi
+
+  cv2.circle(frame_with_canvas, (755, 660), radius, tuple(int(c) for c in cv2.mean(curr_color)[:3]), 1 if eraser else -1)
+  cv2.putText(frame_with_canvas, "Current Selection:", (425, 630), cv2.FONT_HERSHEY_SIMPLEX, 1, (1, 1, 1), 2)
+  cv2.putText(frame_with_canvas, "Press 'q' to Quit!", (10, 670),  cv2.FONT_HERSHEY_SIMPLEX, 1, (1, 1, 1), 2)
 
   cv2.imshow('Webcam Source', frame_with_canvas)
 

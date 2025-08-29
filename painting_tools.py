@@ -6,7 +6,7 @@ def load_and_process(path, size=(128, 128)):
   color = cv2.imread(path)
   return cv2.resize(color, size)
 
-def create_overlay(video_source):
+def create_top_overlay(video_source):
   
   color_names = ["red", "blue", "yellow", "green", "white", "black"]
   color_list = [load_and_process(f"data/{color}.png") for color in color_names] 
@@ -19,8 +19,8 @@ def create_overlay(video_source):
   # Load banner along with overlay that only captures the banner's region,
   # rather than the full image
   banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
-  overlay = np.zeros((banner_h, frame_w, frame_c), dtype=np.uint8)
-  overlay[:] = banner
+  top_overlay = np.zeros((banner_h, frame_w, frame_c), dtype=np.uint8)
+  top_overlay[:] = banner
   
   space = (frame_w - edge_size*2) / len(color_list) # dynamically create the 
                                                     # amount of space needed
@@ -32,13 +32,45 @@ def create_overlay(video_source):
     end_x = start_x + color_w
     i += 1
     esi = int(edge_size*i)
-    overlay[edge_size:edge_size+color_h, esi+start_x:esi+end_x] = color
+    top_overlay[edge_size:edge_size+color_h, esi+start_x:esi+end_x] = color
     # Change color to be same channels at video_source for selection
     color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
-  return (overlay, banner_h, color_loc_pair)
+  return (top_overlay, banner_h, color_loc_pair)
 
-def paint(video_source, color, index_x, index_y, radius=15):
+def create_bottom_overlay(video_source):
+  
+  frame_h, frame_w, frame_c = video_source.shape
+  
+  banner_h = 120 # Make the bottom banner a little shorter than top banner
+  banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
+  bottom_overlay = np.zeros((frame_h, frame_w, frame_c), dtype=np.uint8)
+  bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
+  tool_loc_pair = []
+
+  bottom_overlay[607:715, 290:398] = load_and_process("data/eraser.png", (108, 108))
+  tool_loc_pair.append((0, (607, 715, 290, 398)))
+
+  radii = [10, 20, 30, 50]
+  edge_gap = 30
+  y = frame_h - banner_h + int(banner_h/2)
+  x = 845 + radii[0]
+  for i, r in enumerate(radii):
+    cv2.circle(bottom_overlay, (x, y), r, (0, 0, 1), -1)
+    
+    # Get bounding box of circles probably makes selection easier
+    left_edge    = x-r
+    right_edge   = x+r
+    top_edge     = y-r
+    bottom_edge  = y+r
+    tool_loc_pair.append((radii[i], (top_edge, bottom_edge, left_edge, right_edge)))
+    if i < len(radii) - 1:
+      # Move to the next center with formula curr center + curr radius + hgap + next radius
+      x += r + edge_gap + radii[i+1]
+
+  return (bottom_overlay, banner_h, tool_loc_pair)
+
+def paint(video_source, color, index_x, index_y, radius=20):
   # Just create an overlay and add splotches of the color to that overlay
   if type(color) is not tuple:
     color_tuple = tuple(int(c) for c in cv2.mean(color)[:3])
@@ -51,7 +83,7 @@ def paint(video_source, color, index_x, index_y, radius=15):
     color =color_tuple, thickness=-1)
   return video_source
 
-def blend(video_source, new_color, curr_color, index_x, index_y):
+def blend(video_source, new_color, curr_color, index_x, index_y, radius):
   # If a color is already painted, blend them together!
   # Maybe average the two RGB vals?
   color_tuple = tuple(int(c) for c in cv2.mean(new_color)[:3])
@@ -62,4 +94,7 @@ def blend(video_source, new_color, curr_color, index_x, index_y):
                       for i in range(3)
   )
 
-  return paint(video_source, blended_color, index_x, index_y)
+  return paint(video_source, blended_color, index_x, index_y, radius)
+
+def erase(video_source, index_x, index_y):
+  return
