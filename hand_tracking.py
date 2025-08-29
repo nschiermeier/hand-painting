@@ -141,14 +141,15 @@ while capture.isOpened():
 
   # Add the banner and create an ROI to blend, so that this is
   # the ONLY region that the alpha gets appleid to, not the whole image
-  roi = frame_with_canvas[0:banner_h, 0:frame.shape[1]]
+  roi = frame_with_canvas[0:banner_h, 0:frame_w]
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, top_banner_overlay, alpha, 0)
-  frame_with_canvas[0:banner_h, 0:frame.shape[1]] = blended_roi
+  frame_with_canvas[0:banner_h, 0:frame_w] = blended_roi
 
-  bottom_banner_overlay = bottom_banner_overlay[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]]
-  roi = frame_with_canvas[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]]
+  cut = 30
+  bottom_banner_overlay = bottom_banner_overlay[frame_h-banner_h+cut:frame_h+cut, 0:frame_w]
+  roi = frame_with_canvas[frame_h-banner_h+cut:frame_h+cut, 0:frame_w]
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, bottom_banner_overlay, alpha, 0)
-  frame_with_canvas[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]] = blended_roi
+  frame_with_canvas[frame_h-banner_h+cut:frame_h+cut, 0:frame_w] = blended_roi
 
   cv2.imshow('Webcam Source', frame_with_canvas)
 
