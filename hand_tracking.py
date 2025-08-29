@@ -65,6 +65,8 @@ capture.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
 capture.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 print(f"Frame size: {capture.get(cv2.CAP_PROP_FRAME_WIDTH)} x {capture.get(cv2.CAP_PROP_FRAME_HEIGHT)}")
 curr_color = None
+radius = 20
+eraser = False
 canvas = np.zeros((int(capture.get(cv2.CAP_PROP_FRAME_HEIGHT)), int(capture.get(cv2.CAP_PROP_FRAME_WIDTH)), 3), dtype=np.uint8)
 while capture.isOpened():
   # Grab next image in video stream, ret is False if webcam has issues (i.e. disconnects)
@@ -109,20 +111,32 @@ while capture.isOpened():
 
     if index and middle: # Selection mode
       for color, (y_min, y_max, x_min, x_max) in color_locs:
-      # This works, but I don't like the loop as it feels inefficient...
         if y_min <= index_y <= y_max: # First see if fingers are in the selection bar 
           if x_min <= index_x <= x_max: # Next see specific coords of fingers.
                                         # If coords overlap with a colored square,
                                         # set to that color
             curr_color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
+            eraser = False
 
+      for tool, (y_min, y_max, x_min, x_max) in tool_locs:
+        if y_min <= index_y <= y_max:
+          if x_min <= index_x <= x_max:
+            if tool == 0:
+              # Set color to true 0, which should erase
+              curr_color = (0,0,0)
+              eraser = True
+
+
+            else:
+              radius = tool
+        
     elif index: # Drawing mode
       #TODO: Create something that doesn't allow user to draw on top banner
       if curr_color is not None:
-        if any(canvas[int(index_y)][int(index_x)]) != 0: 
-          blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y)
+        if any(canvas[int(index_y)][int(index_x)]) != 0 and eraser==False: 
+          blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y, radius)
         else:
-          paint(canvas, curr_color, index_x, index_y)
+          paint(canvas, curr_color, index_x, index_y, radius)
       
     else: # Nothing, this might not be needed
       pass
