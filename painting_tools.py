@@ -6,7 +6,7 @@ def load_and_process(path, size=(128, 128)):
   color = cv2.imread(path)
   return cv2.resize(color, size)
 
-def create_overlay(video_source):
+def create_top_overlay(video_source):
   
   color_names = ["red", "blue", "yellow", "green", "white", "black"]
   color_list = [load_and_process(f"data/{color}.png") for color in color_names] 
@@ -36,20 +36,23 @@ def create_overlay(video_source):
     # Change color to be same channels at video_source for selection
     color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
+  return (top_overlay, banner_h, color_loc_pair)
 
-  # Bottom banner
+def create_bottom_overlay(video_source):
+  
+  frame_h, frame_w, frame_c = video_source.shape
+  
+  banner_h = 120 # Make the bottom banner a little shorter than top banner
+  banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
   bottom_overlay = np.zeros((frame_h, frame_w, frame_c), dtype=np.uint8)
   bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
 
-  tool_names = ["eraser", "small", "medium", "large"]
-  tool_list = [load_and_process(f"data/{tool}.png", (108, 108)) for tool in tool_names] 
-  
-  bottom_overlay[607:715, 300:408] = tool_list[0]
+  bottom_overlay[607:715, 300:408] = load_and_process("data/eraser.png", (108, 108))
 
   radii = [10, 20, 30, 50]
   edge_gap = 30
-  y = 665 # mathmatesize ts shi later
-  
+  y = frame_h - banner_h + int(banner_h/2)
+
   x = 840 + radii[0]
   for i, r in enumerate(radii):
     cv2.circle(bottom_overlay, (x, y), r, (0, 0, 1), -1)
@@ -57,15 +60,9 @@ def create_overlay(video_source):
       # Move to the next center with formula curr center + curr radius + hgap + next radius
       x += r + edge_gap + radii[i+1]
     
-  """
-  cv2.circle(bottom_overlay, (850, 665), 10, (0, 0, 1), -1)
-  cv2.circle(bottom_overlay, (900, 665), 20, (0, 0, 1), -1)
-  cv2.circle(bottom_overlay, (970, 665), 30, (0, 0, 1), -1)
-  cv2.circle(bottom_overlay, (1070, 665), 50, (0, 0, 1), -1)
-  """
+  tool_loc_pair = None
 
-
-  return (top_overlay, bottom_overlay, banner_h, color_loc_pair)
+  return (bottom_overlay, banner_h, tool_loc_pair)
 
 def paint(video_source, color, index_x, index_y, radius=15):
   # Just create an overlay and add splotches of the color to that overlay

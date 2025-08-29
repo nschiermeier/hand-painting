@@ -4,7 +4,7 @@ from mediapipe.framework.formats import landmark_pb2
 from mediapipe.tasks import python
 from mediapipe.tasks.python import vision
 import numpy as np
-from painting_tools import create_overlay, paint, blend
+from painting_tools import create_top_overlay, create_bottom_overlay, paint, blend
 
 # mp hands with options changed to work better with video stream
 mp_hands = mp.solutions.hands.Hands(
@@ -87,7 +87,10 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  top_banner_overlay, bottom_banner_overlay, banner_h, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  top_overlay_data = create_top_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  top_banner_overlay, banner_h, color_locs = top_overlay_data
+  bottom_overlay_data = create_bottom_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  bottom_banner_overlay, bottom_banner_h, tool_locs = bottom_overlay_data
   alpha = 0.6
 
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
@@ -145,11 +148,10 @@ while capture.isOpened():
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, top_banner_overlay, alpha, 0)
   frame_with_canvas[0:banner_h, 0:frame_w] = blended_roi
 
-  cut = 30
-  bottom_banner_overlay = bottom_banner_overlay[frame_h-banner_h+cut:frame_h+cut, 0:frame_w]
-  roi = frame_with_canvas[frame_h-banner_h+cut:frame_h+cut, 0:frame_w]
+  bottom_banner_overlay = bottom_banner_overlay[frame_h-bottom_banner_h:frame_h, 0:frame_w]
+  roi = frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w]
   blended_roi = cv2.addWeighted(roi, 1.0 - alpha, bottom_banner_overlay, alpha, 0)
-  frame_with_canvas[frame_h-banner_h+cut:frame_h+cut, 0:frame_w] = blended_roi
+  frame_with_canvas[frame_h-bottom_banner_h:frame_h, 0:frame_w] = blended_roi
 
   cv2.imshow('Webcam Source', frame_with_canvas)
 
