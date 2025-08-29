@@ -42,8 +42,27 @@ def create_overlay(video_source):
   bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
 
   tool_names = ["eraser", "small", "medium", "large"]
-  tool_list = [load_and_process(f"data/{tool}.png", (96, 96)) for tool in tool_names] 
-  print(tool_list) 
+  tool_list = [load_and_process(f"data/{tool}.png", (108, 108)) for tool in tool_names] 
+  
+  bottom_overlay[607:715, 300:408] = tool_list[0]
+
+  radii = [10, 20, 30, 50]
+  edge_gap = 30
+  y = 665 # mathmatesize ts shi later
+  
+  x = 840 + radii[0]
+  for i, r in enumerate(radii):
+    cv2.circle(bottom_overlay, (x, y), r, (0, 0, 1), -1)
+    if i < len(radii) - 1:
+      # Move to the next center with formula curr center + curr radius + hgap + next radius
+      x += r + edge_gap + radii[i+1]
+    
+  """
+  cv2.circle(bottom_overlay, (850, 665), 10, (0, 0, 1), -1)
+  cv2.circle(bottom_overlay, (900, 665), 20, (0, 0, 1), -1)
+  cv2.circle(bottom_overlay, (970, 665), 30, (0, 0, 1), -1)
+  cv2.circle(bottom_overlay, (1070, 665), 50, (0, 0, 1), -1)
+  """
 
 
   return (top_overlay, bottom_overlay, banner_h, color_loc_pair)
