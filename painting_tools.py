@@ -19,8 +19,10 @@ def create_overlay(video_source):
   # Load banner along with overlay that only captures the banner's region,
   # rather than the full image
   banner = cv2.resize(cv2.imread("data/banner.png"), (frame_w, banner_h))
-  overlay = np.zeros((banner_h, frame_w, frame_c), dtype=np.uint8)
-  overlay[:] = banner
+  top_overlay = np.zeros((banner_h, frame_w, frame_c), dtype=np.uint8)
+  top_overlay[:] = banner
+  bottom_overlay = np.zeros((frame_h, frame_w, frame_c), dtype=np.uint8)
+  bottom_overlay[frame_h - banner_h:frame_h, 0:frame_w] = banner
   
   space = (frame_w - edge_size*2) / len(color_list) # dynamically create the 
                                                     # amount of space needed
@@ -32,11 +34,12 @@ def create_overlay(video_source):
     end_x = start_x + color_w
     i += 1
     esi = int(edge_size*i)
-    overlay[edge_size:edge_size+color_h, esi+start_x:esi+end_x] = color
+    top_overlay[edge_size:edge_size+color_h, esi+start_x:esi+end_x] = color
     # Change color to be same channels at video_source for selection
     color = cv2.cvtColor(color, cv2.COLOR_RGB2BGR)
     color_loc_pair.append((color, (edge_size, edge_size+color_h, esi+start_x, esi+end_x)))
-  return (overlay, banner_h, color_loc_pair)
+
+  return (top_overlay, bottom_overlay, banner_h, color_loc_pair)
 
 def paint(video_source, color, index_x, index_y, radius=15):
   # Just create an overlay and add splotches of the color to that overlay

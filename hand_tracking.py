@@ -87,7 +87,7 @@ while capture.isOpened():
 
   # Process the detection result, then display result
   annotated_hand = draw_hand_landmarks_on_image(rgb_frame.numpy_view(),  hand_result)
-  banner_overlay, banner_h, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
+  top_banner_overlay, bottom_banner_overlay, banner_h, color_locs = create_overlay(cv2.cvtColor(annotated_hand, cv2.COLOR_RGB2BGR))
   alpha = 0.6
 
   if results.multi_hand_landmarks: # Only execute this if a hand is detected in webcam
@@ -142,8 +142,13 @@ while capture.isOpened():
   # Add the banner and create an ROI to blend, so that this is
   # the ONLY region that the alpha gets appleid to, not the whole image
   roi = frame_with_canvas[0:banner_h, 0:frame.shape[1]]
-  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, banner_overlay, alpha, 0)
+  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, top_banner_overlay, alpha, 0)
   frame_with_canvas[0:banner_h, 0:frame.shape[1]] = blended_roi
+
+  bottom_banner_overlay = bottom_banner_overlay[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]]
+  roi = frame_with_canvas[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]]
+  blended_roi = cv2.addWeighted(roi, 1.0 - alpha, bottom_banner_overlay, alpha, 0)
+  frame_with_canvas[frame.shape[0]-banner_h:frame.shape[0], 0:frame.shape[1]] = blended_roi
 
   cv2.imshow('Webcam Source', frame_with_canvas)
 
