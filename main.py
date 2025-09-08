@@ -15,7 +15,7 @@ mp_hands = mp.solutions.hands.Hands(
             min_tracking_confidence=0.7
         )
 
-hand_path = r'C:/Users/Nick/Projects/mirror-the-mask/data/hand_landmarker.task'
+hand_path = r'./data/hand_landmarker.task'
 base_hand_options = python.BaseOptions(model_asset_buffer=open(hand_path, 'rb').read()) # Open hand path for finger tracking
 
 hand_options = vision.HandLandmarkerOptions( # options object using specified base settings
@@ -91,7 +91,6 @@ def main():
                 radius = tool
         
       elif index: # Drawing mode
-        #TODO: Create something that doesn't allow user to draw on top banner
         if curr_color is not None:
           if any(canvas[int(index_y)][int(index_x)]) != 0 and eraser==False: 
             blend(canvas, curr_color, canvas[int(index_y)][int(index_x)], index_x, index_y, radius)
